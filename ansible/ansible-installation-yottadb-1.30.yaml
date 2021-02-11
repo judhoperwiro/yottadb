@@ -1,0 +1,155 @@
+---
+- hosts: yotta
+  remote_user: redhat
+  become: true
+  tasks:
+    - name: 01. Create a login user
+      user:
+        name: ydbadm
+        password: "{{ 'ydbadm' | password_hash('sha512') }}"
+        uid: 1001
+        state: present
+        shell: /bin/bash
+        system: no
+        createhome: yes
+        home: /home/ydbadm
+
+    - name: 02. set users password valid time
+      shell: chage -I -1 -m 0 -M 99999 -E -1 ydbadm
+
+    - name: 03. transfer yottaDB.tgz
+      copy:
+        src: /data/ansible/yottaDB/source/yottadb.tgz
+        dest: /tmp/
+
+    - name: 04. Extract yottadb.tgz
+      unarchive:
+        src: /tmp/yottadb.tgz
+        dest: /tmp/
+        mode: 0777
+        remote_src: yes
+
+    - name: 05. Run yottaDB script
+      shell: ./install_yottadb.sh
+      args:
+        chdir: /tmp/yottadb/
+        executable: /bin/bash
+
+    - name: 06. Change ownership yottaDB /data/ydbadm
+      file:
+        path: /ydb
+        owner: ydbadm
+        group: ydbadm
+        mode: 0750
+        state: directory
+
+    - name: 07. Change ownership yottaDB /data/ydbadm
+      file:
+        path: /ydbdir
+        owner: ydbadm
+        group: ydbadm
+        mode: 0750
+        state: directory
+
+    - name: 07. Change ownership yottaDB /data/ydbadm
+      file:
+        path: /data/yottadb
+        owner: ydbadm
+        group: ydbadm
+        mode: 0750
+        state: directory
+
+    - name: 08. Change ownership yottaDB /global
+      file:
+        path: /global
+        owner: ydbadm
+        group: ydbadm
+        mode: 0750
+        state: directory
+
+    - name: 09. Change ownership yottaDB /ydb_dist_r128
+      file:
+        path: /data/yottadb/ydb/ydb_dist_r128
+        owner: root
+        group: root
+        state: directory
+
+    - name: 10. Change permission /gtmsecshr
+      file:
+        path: /data/yottadb/ydb/ydb_dist_r128/gtmsecshr
+        state: file
+        mode: 4555
+
+
+    - name: 11. transfer yottaDB.tgz
+      copy:
+        src: /data/ansible/yottaDB/source/ydb_dist_r130_rhel.tgz
+        dest: /tmp/
+
+    - name: 12. Extract ydb_dist_r130_rhel.tgz
+      unarchive:
+        src: /tmp/ydb_dist_r130_rhel.tgz
+        dest: /tmp/
+        mode: 0777
+        remote_src: yes
+
+    - name: 13. Copy YottaDB 1.30 file into /data/yottadb/ydb
+      shell: mv /tmp/ydb_dist_r130 /data/yottadb/ydb/
+
+    - name: 14. Change Permission ydb_dist_r130
+      file:
+        path: /data/yottadb/ydb/ydb_dist_r130
+        owner: ydbadm
+        group: ydbadm
+        mode: 0755
+
+    - name: 15. Edit ydb_dist on path /ydbdir/ydbenv
+      lineinfile:
+        path: /ydbdir/ydbenv
+        regexp: '^export ydb_dist='
+        insertafter: '^ ## urls will be written to each interval.'
+        line: 'export ydb_dist=/ydb/ydb_dist_r130'
+
+    - name: 16. Edit ydb_dist on path /ydbdir/ydbenv_local
+      lineinfile:
+        path: /ydbdir/ydbenv_local
+        regexp: '^export ydb_dist='
+        insertafter: '^ ## urls will be written to each interval.'
+        line: 'export ydb_dist=/ydb/ydb_dist_r130'
+
+    - name: 17. Copy yottadb.pc file into /usr/share/pkgconfig
+      shell: cp /ydb/ydb_dist_r130/yottadb.pc /usr/share/pkgconfig
+
+    - name: 18. Change Permission /usr/share/pkgconfig
+      file:
+        path: /usr/share/pkgconfig
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: 19. Change ownership yottaDB /global
+      file:
+        path: /ydbdir/ydbenv
+        owner: ydbadm
+        group: ydbadm
+        mode: 0750
+
+    - name: 20. Change ownership yottaDB /global
+      file:
+        path: /ydbdir/ydbenv_local
+        owner: ydbadm
+        group: ydbadm
+        mode: 0750
+      tags: update
+
+    - name: 21. Extend Lenght of YottaDB
+      shell: |
+        . ./ydbenv_local
+        mupip set -rec=300000 -reg DATA
+        mupip set -key=500 -reg DATA
+        mupip set -null_subscripts=TRUE -region DATA
+      become_user: ydbadm
+      args:
+        chdir: /ydbdir
+        executable: /bin/bash
+      tags: update

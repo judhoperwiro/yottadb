@@ -1,0 +1,8 @@
+[yotta]
+hostname-machine-01
+hostname-machine-02
+
+[yotta:vars]
+ansible_user=redhat
+ansible_ssh_pass=redhat
+ansible_sudo_pass=redhat
