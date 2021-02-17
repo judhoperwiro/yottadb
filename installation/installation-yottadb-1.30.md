@@ -43,10 +43,8 @@ Exec command:
 cd /Source/
 tar -xvzf ydb_dist_r130_rhel.tgz
 mv ydb_dist_r130 /data/yottadb/ydb
-vi /ydbdir/ydbenv
-export ydb_dist=/ydb/ydb_dist_r130
-vi /ydbdir/ydbenv_local
-export ydb_dist=/ydb/ydb_dist_r130
+echo "export ydb_dist=/ydb/ydb_dist_r130" >> /ydbdir/ydbenv
+echo "export ydb_dist=/ydb/ydb_dist_r130" >> /ydbdir/ydbenv_local
 cp -p /ydb/ydb_dist_r130/yottadb.pc /usr/share/pkgconfig
 chown ydbadm:ydbadm /ydbdir/ydbenv
 chown ydbadm:ydbadm /ydbdir/ydbenv_local
